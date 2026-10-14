@@ -24,4 +24,4 @@ harno comes with hooks for Claude Code only. Another agent needs a tool folder w
 
 ## Releases {0fb829}
 
-Releases build harno for macOS, Linux and Windows, and GitHub Actions runs the tests on Linux and starts harno on Windows. Next: the whole test suite on Windows, whose tests start `sh` today, and the Claude Code hooks tried there. Later: publish to crates.io.
+Releases build harno for macOS, Linux and Windows, and GitHub Actions runs the tests on Linux and macOS and starts harno on Windows. Next: the whole test suite on Windows, whose tests start `sh` today, and the Claude Code hooks tried there. Later: publish to crates.io.
