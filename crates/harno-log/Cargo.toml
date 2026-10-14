@@ -1,0 +1,15 @@
+[package]
+name = "harno-log"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "The session log of harno: the events of a session, the texts beside them, and what they add up to"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+serde_json = { version = "1", features = ["preserve_order"] }
+fastrand = "2"
+uuid = { version = "1", features = ["v7"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }

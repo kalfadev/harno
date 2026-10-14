@@ -1,0 +1,11 @@
+# edit: replace a text that occurs once, replace lines a-b, write a file.
+# harno tool add writes the presets below into run.presets of .harno/config.yml.
+presets:
+  # replace -- <file> <old> <new>: change a text that occurs once
+  replace: { seq: ["python3 .harno/tools/edit/edit.py replace {args}"] }
+  # lines -- <file> <a>-<b> <text>: replace lines a-b, several of them bottom up
+  lines: { seq: ["python3 .harno/tools/edit/edit.py lines {args}"] }
+  # write -- <file> <text>: create or overwrite a file
+  write: { seq: ["python3 .harno/tools/edit/edit.py write {args}"] }
+  # doc -- <id> <old> <new>: change a text in the body of a doc node; its lines are found when it runs
+  doc: { seq: ["python3 .harno/tools/edit/edit.py doc {args}"] }

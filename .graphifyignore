@@ -1,0 +1,3 @@
+# graphify skips .harno/: its tools/ are copies of the ones
+# at the root, and scanned twice every function would be two nodes in the graph.
+.harno/

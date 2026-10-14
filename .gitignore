@@ -1,0 +1,11 @@
+/target
+.claude/*
+!.claude/settings.json
+!.claude/skills/
+__pycache__/
+.harno/log/
+.harno/tools/analytics/bin/
+.harno/tools/analytics/.crates.toml
+.harno/tools/analytics/.crates2.json
+.DS_Store
+graphify-out/

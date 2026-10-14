@@ -1,0 +1,13 @@
+# harno filter for `bat`, the show preset (harno tool add bat-filter)
+# A range the agent asked for (-r a:b) up to 300 lines comes whole; a whole file stops there,
+# since a read of a whole file is the mistake: the rest is in harno log raw <n>, and a
+# narrower -r a:b is the better next call.
+# width: one line can be a whole minified file, and head/tail cannot reach inside it
+filter:
+  command: bat
+  head: 300
+  tail: 0
+  width: 600
+  tests:
+    - input: "   1 a\n   2 b\n"
+      expected: "   1 a\n   2 b\n"

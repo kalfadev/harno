@@ -1,0 +1,12 @@
+# text: a literal text and every place it is mentioned, signs and all, whole-word at
+# its ends; rg underneath (harno tool add text).
+presets:
+  # text -- <word or phrase…> [<path>…]: the text as it reads; no quotes, no regex
+  text: { seq: ["python3 .harno/tools/text/text.py {args}"] }
+# one line can be a whole minified file; no match is an answer, not a failure
+filter:
+  command: python3 .harno/tools/text/text.py
+  width: 400
+  on_empty: no match
+  ok: [1]
+  tests: [{ input: "", expected: "no match\n", exit: 1 }]

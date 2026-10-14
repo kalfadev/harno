@@ -1,0 +1,5 @@
+# commit-only: commit the named paths and nothing else, so a session commits its own
+# work while another session works in the same tree (harno tool add commit-only).
+presets:
+  # commit-only -- <message> <path>…: those paths, new, changed or deleted; every other change stays
+  commit-only: { seq: ["bash .harno/tools/commit-only/commit-only.sh {args}"] }

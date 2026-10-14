@@ -1,0 +1,7 @@
+# analytics: the session log of the project on one local read-only page. The program is
+# analytics, compiled: harno tool add copies these files only, and the program is built
+# from a harno checkout into this folder:
+#   cargo install --path tools/analytics --root .harno/tools/analytics
+presets:
+  # analytics [-- --port N | --background | --stop]: the session log on a local read-only page
+  analytics: { seq: [".harno/tools/analytics/bin/analytics {args}"] }

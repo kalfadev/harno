@@ -1,0 +1,65 @@
+# harno filter for `cargo test` (harno tool add cargo-test-filter)
+filter:
+  command: cargo test
+  # A pass: the summary line of every test binary that ran a test.
+  keep: ['^test result:']
+  drop: ['^test result: ok\. 0 passed']
+  on_empty: 'cargo test: no tests ran'
+  # A failure: every compiler error and the failure report, without the
+  # lines for tests that passed and the build noise.
+  on_fail:
+    drop:
+      - '^\s+(Compiling|Downloaded|Downloading|Finished|Running|Doc-tests|Blocking)\b'
+      - '^test .* \.\.\. ok$'
+      - '^running 0 tests$'
+      - '^test result: ok\. 0 passed'
+      - '^\s*$'
+    tail: 150
+    # A panic message prints a whole value; the rest is in the log.
+    width: 200
+  tests:
+    - input: |2
+        running 2 tests
+        test a ... ok
+        test b ... ok
+
+        test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+        running 0 tests
+
+        test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+      expected: |2
+        test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+    - exit: 101
+      input: |2
+           Compiling foo v0.1.0
+            Finished test profile
+             Running unittests src/lib.rs
+        running 2 tests
+        test a ... ok
+        test b ... FAILED
+
+        failures:
+
+        ---- b stdout ----
+        assertion failed: 1 == 2
+
+        failures:
+            b
+
+        test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+      expected: |2
+        running 2 tests
+        test b ... FAILED
+        failures:
+        ---- b stdout ----
+        assertion failed: 1 == 2
+        failures:
+            b
+        test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+    - input: |2
+        running 0 tests
+
+        test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+      expected: |2
+        cargo test: no tests ran

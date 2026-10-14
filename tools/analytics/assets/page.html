@@ -1,0 +1,951 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>harno</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M8 4L4 12M8 4L12 12%22 stroke=%22%238a8a92%22 fill=%22none%22/%3E%3Ccircle cx=%228%22 cy=%224%22 r=%222.5%22 fill=%22%232f6fdf%22/%3E%3Ccircle cx=%224%22 cy=%2212%22 r=%222.5%22 fill=%22%23e8590c%22/%3E%3Ccircle cx=%2212%22 cy=%2212%22 r=%222.5%22 fill=%22%232f6fdf%22/%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f6f6f4; --panel: #ffffff; --panel-2: #f0f0ed; --ink: #1c1c1f; --muted: #6c6c74; --faint: #9a9aa2; --line: #e3e3df;
+    --accent: #2f6fdf; --accent-soft: #e6eeff; --sel: #dde8ff;
+    --hit: #e8590c; --shown: #f2b35b; --seen: #2f6fdf;
+    --ok: #2b8a3e; --fail: #d62f2f; --fail-soft: #fff1f1; --pend: #9a9aa2;
+    --prompt: #f4f1ff; --prompt-ink: #5f3dc4; --response: #eef7f1; --response-ink: #2b7a4b; --outside: #d9480f;
+    --shadow: 0 10px 30px rgba(0, 0, 0, .14);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #131316; --panel: #1b1b1f; --panel-2: #24242a; --ink: #ececef; --muted: #a0a0aa; --faint: #6e6e78; --line: #2c2c33;
+      --accent: #6ea2ff; --accent-soft: #1f2a44; --sel: #22314f;
+      --hit: #ff8a3d; --shown: #b9853a; --seen: #6ea2ff;
+      --ok: #51cf66; --fail: #ff6b6b; --fail-soft: #33191c; --pend: #6e6e78;
+      --prompt: #231f36; --prompt-ink: #b197fc; --response: #1a2920; --response-ink: #69db7c; --outside: #ff922b;
+      --shadow: 0 10px 30px rgba(0, 0, 0, .5);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #131316; --panel: #1b1b1f; --panel-2: #24242a; --ink: #ececef; --muted: #a0a0aa; --faint: #6e6e78; --line: #2c2c33;
+    --accent: #6ea2ff; --accent-soft: #1f2a44; --sel: #22314f;
+    --hit: #ff8a3d; --shown: #b9853a; --seen: #6ea2ff;
+    --ok: #51cf66; --fail: #ff6b6b; --fail-soft: #33191c; --pend: #6e6e78;
+    --prompt: #231f36; --prompt-ink: #b197fc; --response: #1a2920; --response-ink: #69db7c; --outside: #ff922b;
+    --shadow: 0 10px 30px rgba(0, 0, 0, .5);
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font: 13px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  button, input { font: inherit; color: inherit; }
+  code, pre, .mono { font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .muted { color: var(--muted); }
+
+  main { display: grid; grid-template-columns: var(--tw, 320px) 5px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); height: 100vh; }
+  #vsplit { cursor: col-resize; touch-action: none; background: var(--line); }
+  #vsplit:hover, #vsplit.drag { background: var(--accent); }
+  header { grid-column: 1 / -1; position: relative; display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+    border-bottom: 1px solid var(--line); background: var(--panel); min-width: 0; }
+  .brand { font-weight: 650; letter-spacing: -.01em; }
+  .picker { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: min(560px, 46vw); padding: 5px 10px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; }
+  .picker:hover { border-color: var(--accent); }
+  .picker .l { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stats { flex: 1; min-width: 0; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .live-dot { flex: none; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ok);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+  .s .l .live-dot { margin-right: 7px; vertical-align: 0; }
+  .btn { border: 1px solid var(--line); background: var(--panel); border-radius: 7px; padding: 4px 10px; cursor: pointer; }
+  .btn:hover { background: var(--panel-2); }
+  .btn:disabled { opacity: .6; cursor: default; }
+  .btn.sm { padding: 1px 8px; font-size: 12px; }
+  .btn.icon { width: 30px; padding: 4px 0; text-align: center; }
+  input[type=search] { padding: 5px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); min-width: 0; }
+
+  .pop { position: absolute; top: calc(100% + 4px); left: 12px; width: min(680px, calc(100vw - 24px)); max-height: 72vh; z-index: 20;
+    display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); }
+  .pop-h { display: flex; gap: 10px; align-items: center; padding: 10px; border-bottom: 1px solid var(--line); font-size: 12px; }
+  .pop-body { display: grid; grid-template-columns: 216px minmax(0, 1fr); min-height: 0; overflow: hidden; }
+  .logs { display: flex; flex-direction: column; gap: 4px; padding: 8px; border-right: 1px solid var(--line); overflow: auto; }
+  .logs .h { padding: 2px 9px 4px; color: var(--faint); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  .log { width: 100%; text-align: left; padding: 7px 9px; border: 1px solid transparent; border-radius: 8px; background: none; cursor: pointer; }
+  .log:hover { background: var(--panel-2); }
+  .log.on { background: var(--accent-soft); border-color: var(--accent); }
+  .log .n { display: flex; gap: 8px; align-items: baseline; font-weight: 600; }
+  .log.on .n { color: var(--accent); }
+  .log .n i { margin-left: auto; font-style: normal; font-weight: 400; font-size: 11.5px; color: var(--muted); }
+  .log .d { display: block; margin-top: 2px; color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+  .pop-h input[type=search] { flex: 1; font-size: 13px; }
+  .pop-h label { display: flex; gap: 4px; align-items: center; white-space: nowrap; cursor: pointer; }
+  #session-list { overflow: auto; }
+  .s { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; width: 100%; text-align: left; border: 0;
+    border-bottom: 1px solid var(--line); background: none; padding: 7px 12px; cursor: pointer; }
+  .s:hover, .s.kb { background: var(--panel-2); }
+  .s.cur { background: var(--sel); }
+  .s .t { grid-area: 1 / 1; }
+  .s .q { grid-area: 1 / 2; }
+  .s .l { grid-area: 2 / 1 / 3 / 3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .s .t, .s .q { color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+  #timeline { display: flex; flex-direction: column; min-height: 0; min-width: 0; border-right: 1px solid var(--line); background: var(--panel); }
+  .bar { display: flex; flex-direction: column; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  .chips { display: flex; gap: 4px; flex-wrap: wrap; }
+  .chips button { border: 1px solid var(--line); background: none; border-radius: 99px; padding: 1px 10px; cursor: pointer; font-size: 12px; color: var(--muted); }
+  .chips button b { font-weight: 600; color: var(--ink); margin-left: 5px; }
+  .chips button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  * { scrollbar-width: thin; scrollbar-color: var(--faint) transparent; }
+  #events { flex: 1; overflow: auto; min-height: 0; }
+  .turnh { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 2px 12px 2px 14px;
+    font-size: 11px; color: var(--muted); background: var(--panel-2); border-bottom: 1px solid var(--line); }
+  .turnh b { color: var(--ink); font-weight: 600; }
+  .turnh .t { margin-left: auto; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .turnh.hook b { color: var(--muted); font-style: italic; }
+  .flat .turnh { display: none; }
+  .turn .ev { scroll-margin-top: 24px; }
+  .turnh { cursor: pointer; user-select: none; }
+  .turnh:hover { background: var(--line); }
+  .turnh::before { content: "▾"; width: 10px; color: var(--faint); }
+  .turnh.shut::before { content: "▸"; }
+  .turnh .fails { color: var(--fail); font-weight: 600; }
+  .ev { padding: 6px 12px 7px 11px; border-bottom: 1px solid var(--line); border-left: 3px solid transparent; cursor: pointer;
+    content-visibility: auto; contain-intrinsic-size: auto 46px; }
+  .ev:hover { background: var(--panel-2); }
+  .ev .head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .ev .cmd, .ev .turn { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ev .turn { color: var(--muted); font-size: 11.5px; }
+  .ev .t { margin-left: auto; flex: none; color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .ev .meta { padding-left: 16px; color: var(--muted); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ev .text { margin-top: 2px; white-space: pre-wrap; overflow-wrap: anywhere; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; }
+  .ev.prompt { background: var(--prompt); }
+  .ev.response { background: var(--response); }
+  .ev.note .tag { color: var(--response-ink); }
+  .ev.note { background: var(--panel-2); }
+  .ev.outside { border-left-color: var(--outside); }
+  .ev.fail, .ev.warn { border-left-color: var(--fail); background: var(--fail-soft); }
+  .ev.raw .cmd { color: var(--outside); }
+  .ev.session { padding: 3px 12px; text-align: center; color: var(--faint); font-size: 11.5px; contain-intrinsic-size: auto 24px; }
+  .ev.sel, .ev.sel:hover { background: var(--sel); border-left-color: var(--accent); }
+  .tag { flex: none; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .prompt .tag { color: var(--prompt-ink); }
+  .response .tag { color: var(--response-ink); }
+  .tag.out { text-transform: none; letter-spacing: 0; font-size: 11.5px; color: var(--outside); padding: 0 6px; border-radius: 4px;
+    background: color-mix(in srgb, var(--outside) 13%, transparent); }
+  .warn .tag.out { color: var(--fail); background: color-mix(in srgb, var(--fail) 13%, transparent); }
+  .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--pend); }
+  .dot.ok { background: var(--ok); }
+  .dot.fail { background: var(--fail); }
+  .badge { font-size: 10.5px; padding: 0 5px; border-radius: 4px; border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); }
+  .badge.warn { color: var(--fail); border-color: color-mix(in srgb, var(--fail) 40%, transparent); }
+
+  #right { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  #detail { flex: 1; min-height: 0; overflow: auto; padding: 14px 18px 48px; background: var(--panel); }
+
+  .d-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .d-title { font-weight: 600; font-size: 14px; }
+  .pill { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--panel-2); color: var(--muted); }
+  .pill.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+  .pill.fail { color: var(--fail); background: color-mix(in srgb, var(--fail) 14%, transparent); }
+  .pill.outside { color: var(--outside); background: color-mix(in srgb, var(--outside) 14%, transparent); }
+  .pill.prompt { color: var(--prompt-ink); background: var(--prompt); }
+  .pill.response { color: var(--response-ink); background: var(--response); }
+  .cmdbox { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0; padding: 8px 10px; background: var(--panel-2); border-radius: 8px; }
+  .cmdbox pre { flex: 1; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .why { margin: 6px 0; overflow-wrap: anywhere; }
+  .chipline { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; margin: 6px 0 0; }
+  .chip { max-width: 100%; padding: 3px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--muted);
+    white-space: pre-wrap; overflow-wrap: anywhere; }
+  .chip.fail { color: var(--fail); border-color: color-mix(in srgb, var(--fail) 40%, transparent); background: var(--fail-soft); }
+  .ran { margin: 10px 0; }
+  .ran > summary { display: inline-flex; align-items: center; gap: 6px; padding: 1px 9px; border: 1px solid var(--line); border-radius: 99px;
+    color: var(--muted); font-size: 12px; cursor: pointer; list-style: none; }
+  .ran > summary::-webkit-details-marker { display: none; }
+  .ran > summary::before { content: "▸"; color: var(--faint); }
+  .ran[open] > summary::before { content: "▾"; }
+  .ran > summary:hover { border-color: var(--hit); }
+  .sec { margin-top: 14px; }
+  .sec-h { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-weight: 600; }
+  .sec-h .muted { font-weight: 400; font-size: 12px; }
+  .sec-h .btn { margin-left: auto; }
+  .sec pre { margin: 0; padding: 10px 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .sec pre.prose { font: 13.5px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .sec .more { margin-top: 6px; }
+  pre .keep { background: color-mix(in srgb, var(--ok) 16%, transparent); border-radius: 3px; }
+  pre .cut { color: var(--faint); }
+  .rawout { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; }
+  .empty { padding: 28px 16px; text-align: center; color: var(--muted); }
+  .loading { animation: appear .2s .25s both; }
+  @keyframes appear { from { opacity: 0; } to { opacity: 1; } }
+  kbd { font: 11px ui-monospace, Menlo, monospace; padding: 0 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; background: var(--panel-2); }
+  .hint { line-height: 2.2; }
+  .modal { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(0, 0, 0, .35); }
+  .modal > div { width: min(460px, calc(100vw - 32px)); padding: 18px 22px; background: var(--panel); border-radius: 12px; box-shadow: var(--shadow); }
+  .modal h2 { font-size: 15px; margin: 0 0 10px; }
+  .modal td { padding: 3px 14px 3px 0; }
+  .toast { position: fixed; left: 50%; bottom: 16px; z-index: 40; transform: translateX(-50%); padding: 6px 14px; border-radius: 8px;
+    background: var(--ink); color: var(--bg); font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  @media (max-width: 860px) {
+    main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 55vh auto; height: auto; min-height: 100vh; }
+    #timeline { border-right: 0; border-bottom: 1px solid var(--line); }
+    #vsplit, .stats { display: none; }
+    #detail { overflow: visible; padding: 12px 16px 40px; }
+    .picker { max-width: 60vw; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="brand">harno</span>
+    <button id="pick" class="picker" aria-haspopup="listbox" aria-expanded="false"><span class="live-dot" id="pick-live" hidden title="Live: new events show as they come"></span><span class="l" id="pick-label">No sessions</span><span class="muted">▾</span></button>
+    <span id="stats" class="stats"></span>
+    <button id="theme" class="btn icon" title="Theme">◐</button>
+    <button id="help-btn" class="btn icon" title="Keyboard shortcuts (?)">?</button>
+    <div id="sessions" class="pop" hidden>
+      <div class="pop-h">
+        <input id="session-q" type="search" placeholder="Search sessions" autocomplete="off">
+        <span id="session-count" class="muted"></span>
+        <button id="session-reload" class="btn sm" title="Reload the list">↻</button>
+      </div>
+      <div class="pop-body">
+        <div id="sources" class="logs" role="listbox" aria-label="Which log"></div>
+        <div id="session-list" role="listbox"></div>
+      </div>
+    </div>
+  </header>
+  <section id="timeline">
+    <div class="bar">
+      <input id="q" type="search" placeholder="Filter events  ( / )" autocomplete="off">
+      <div class="chips" id="chips"><button data-f="all">All<b></b></button><button data-f="harno">harno<b></b></button><button data-f="raw">harno raw<b></b></button><button data-f="outside">Outside<b></b></button><button data-f="chat">Chat<b></b></button><button data-f="failed">Failed<b></b></button></div>
+    </div>
+    <div id="events"></div>
+    <div id="nomatch" class="empty" hidden>No event matches the filter.</div>
+  </section>
+  <div id="vsplit" role="separator" aria-orientation="vertical" title="Drag to resize"></div>
+  <section id="right">
+    <div id="detail"></div>
+  </section>
+</main>
+<div id="help" class="modal" hidden><div>
+  <h2>Keys</h2>
+  <table>
+    <tr><td><kbd>j</kbd> <kbd>↓</kbd></td><td>next event</td></tr>
+    <tr><td><kbd>k</kbd> <kbd>↑</kbd></td><td>previous event</td></tr>
+    <tr><td><kbd>t</kbd> <kbd>T</kbd></td><td>next, previous API turn</td></tr>
+    <tr><td><kbd>x</kbd> <kbd>X</kbd></td><td>fold this API turn, fold all</td></tr>
+    <tr><td><kbd>n</kbd> <kbd>p</kbd></td><td>next, previous prompt</td></tr>
+    <tr><td><kbd>g</kbd> <kbd>G</kbd></td><td>first, last event</td></tr>
+    <tr><td><kbd>/</kbd></td><td>filter the events</td></tr>
+    <tr><td><kbd>s</kbd></td><td>switch session</td></tr>
+    <tr><td><kbd>c</kbd></td><td>copy the command or text</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>close, clear the filter</td></tr>
+  </table>
+</div></div>
+<div id="toast" class="toast"></div>
+<script>
+const DATA = /*HARNO_DATA*/null;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" })[c]);
+const enc = encodeURIComponent;
+const store = {
+  get(k) { try { return localStorage.getItem("harno." + k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem("harno." + k, v); } catch (e) { /* private mode */ } },
+};
+const fmtN = n => n == null ? "?" : n < 1000 ? String(n) : n < 1e6 ? (n / 1e3).toFixed(n < 1e4 ? 1 : 0) + "k" : (n / 1e6).toFixed(1) + "M";
+const fmtMs = ms => ms == null ? "" : ms < 1000 ? ms + " ms" : ms < 60000 ? (ms / 1000).toFixed(1) + " s" : Math.floor(ms / 60000) + " min " + Math.round((ms % 60000) / 1000) + " s";
+const toDate = ts => { const d = new Date(ts); return isNaN(d) ? null : d; };
+const time = ts => { const d = toDate(ts); return d ? d.getTime() : 0; };
+const clock = ts => { const d = toDate(ts); return d ? d.toLocaleTimeString([], { hour12: false }) : ""; };
+const stamp = ts => { const d = toDate(ts); return d ? d.toLocaleDateString([], { month: "short", day: "numeric" }) + ", " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }) : ""; };
+const span = (a, b) => { const x = toDate(a), y = toDate(b); return x && y ? y - x : null; };
+const SQ = String.fromCharCode(39);
+const quote = a => a !== "" && /^[\w@%+=:,./{}-]+$/.test(a) ? a : SQ + a.split(SQ).join(SQ + "\\" + SQ + SQ) + SQ;
+
+let sessions = (DATA && DATA.sessions) || [];
+// A session is live while a hook opened it, it has not ended and its last event
+// is recent. Calls from a plain shell go to `manual`, which no hook opens or
+// ends, so it never counts as live.
+const LIVE_MS = 10 * 60 * 1000;
+const isLive = s => !!s && !!s.started && !s.ended && Date.now() - time(s.last) < LIVE_MS;
+
+// The page asks the server as little as it can: a session log once, an
+// event once, a raw output only on a click; all of it kept here.
+const logs = new Map(), calls = new Map();
+const S = { src: null, id: null, harness: null, events: [], calls: [], rows: [], sel: -1, filter: store.get("filter") || "all", q: "", shut: new Set() };
+const isTool = r => r.kind === "tool" || r.kind === "subagent";
+const isRaw = r => r.kind === "call" && r.ev.verb === "run" && (r.ev.args || []).includes("--raw");
+// Which commands of a call failed it: what the call wrote, else, in a line from before that, every exit but 0.
+const brokeOf = ev => ev.failed || (ev.exit || []).map(x => x !== 0);
+const failedRow = r => r.kind === "call" ? !!r.ev.refused || brokeOf(r.ev).some(Boolean) : isTool(r) && r.ev.ok === false;
+const FILTERS = {
+  all: () => true,
+  harno: r => r.kind === "call" && !isRaw(r),
+  raw: isRaw,
+  outside: isTool,
+  chat: r => r.kind === "prompt" || r.kind === "response" || r.kind === "note",
+  failed: failedRow,
+};
+if (!FILTERS[S.filter]) S.filter = "all";
+let hashTimer = 0, toastTimer = 0;
+let detailSeq = 0, detailTimer = 0, detailAbort = null, texts = [], liveTimer = 0, polling = false, liveOn = false, shownOut = "";
+
+async function getJSON(url, signal) {
+  const r = await fetch(url, { signal });
+  if (!r.ok) { const e = new Error(r.status + " " + r.statusText); e.status = r.status; throw e; }
+  return r.json();
+}
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+}
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text ?? ""); toast("Copied"); } catch (e) { toast("Copy failed"); }
+}
+
+// ── The session: the words of the harness, and the calls they made ──
+const KINDS = new Set(["prompt", "response", "tool", "subagent", "session"]);
+const runsHarno = s => /(^|[\s;&|(])harno\s/.test(s || "");
+const startsHarno = s => /^\s*harno\s/.test(s || "");
+const rowKey = r => (r.kind === "call" ? "c" : "e") + r.ev.n;
+function buildRows(events, calls) {
+  const byN = new Map((calls || []).map(c => [c.n, c]));
+  // A tool call that went through the gate names the lines it claims.
+  const claimed = new Map();
+  for (const e of events) for (const n of e.harno || []) if (byN.has(n)) claimed.set(n, e);
+  // A prompt typed while the agent works is logged when typed, but reaches
+  // the agent at its next tool result, or after the answer when none comes:
+  // with no call between it and the answer, it goes after the answer.
+  const evs = events.slice();
+  for (let i = 0, open = false; i < evs.length; i++) {
+    const e = evs[i];
+    if (e.type === "response") open = false;
+    if (e.type !== "prompt") continue;
+    if (!open) { open = true; continue; }
+    const j = evs.findIndex((x, k) => k > i && ["tool", "subagent", "response", "prompt"].includes(x.type));
+    if (j < 0 || evs[j].type !== "response") continue;
+    evs.splice(j, 0, ...evs.splice(i, 1));
+    i--;
+  }
+  // The stream: every event in order, the calls it claims under it, and the
+  // calls no event claims where their time falls.
+  const loose = (calls || []).filter(c => !claimed.has(c.n));
+  const stream = [];
+  let li = 0;
+  for (const e of evs) {
+    while (li < loose.length && time(loose[li].ts) <= time(e.ts)) stream.push({ call: loose[li++] });
+    if (!KINDS.has(e.type)) continue;
+    const mine = (e.harno || []).map(n => byN.get(n)).filter(Boolean);
+    // A Bash call that is only harno shows through the calls it made.
+    if (!(mine.length && startsHarno(e.summary))) stream.push({ event: e, alone: !mine.length && startsHarno(e.summary) });
+    for (const c of mine) stream.push({ call: c, via: e });
+  }
+  while (li < loose.length) stream.push({ call: loose[li++] });
+
+  // What the agent wrote in a turn rides on the first row of the turn, even
+  // when the call that carries it shows through the calls it made.
+  const rows = [], notes = new Map(), nums = new Map();
+  for (const e of events) {
+    const tk = e.turn || "e" + e.n;
+    if ((e.type === "tool" || e.type === "subagent") && e.said && !notes.has(tk)) notes.set(tk, e);
+  }
+  let turn = null;
+  for (const item of stream) {
+    const ev = item.call || item.event;
+    const r = { ev, el: null, hidden: false, via: item.via || null };
+    if (item.call) {
+      r.kind = "call";
+      r.cmd = "harno " + [ev.verb, ...(ev.args || [])].map(quote).join(" ");
+      r.tk = r.via ? r.via.turn || "e" + r.via.n : "loose";
+      r.hay = [r.cmd, ev.why, ev.refused, "#" + ev.n].filter(Boolean).join(" ").toLowerCase();
+    } else {
+      r.kind = ev.type;
+      r.warn = (ev.type === "tool" || ev.type === "subagent") && runsHarno(ev.summary) && !startsHarno(ev.summary);
+      r.alone = !!item.alone;
+      r.tk = isTool(r) ? ev.turn || "e" + ev.n : ev.type === "response" ? "a" + ev.n : null;
+      r.hay = [ev.text, ev.tool, ev.agent, ev.summary, "#" + ev.n].filter(Boolean).join(" ").toLowerCase();
+    }
+    // A prompt typed while the agent works, before its answer, stays in the
+    // turn it arrived in.
+    if (r.kind === "prompt" && turn && !turn.stats.answered) {
+      r.queued = true;
+      r.tk = (rows.length && rows[rows.length - 1].tk) || null;
+    } else if (r.kind === "prompt") {
+      turn = r;
+      r.stats = { keys: new Set(), logged: null, answered: false, calls: 0, raw: 0, outside: 0, failed: 0, chars: 0, end: ev.ts };
+    } else if (turn) {
+      const t = turn.stats;
+      // Turns are numbered through the session; each prompt counts its own.
+      if (r.tk && !noTurn(r.tk)) { if (!nums.has(r.tk)) nums.set(r.tk, nums.size + 1); t.keys.add(r.tk); r.tn = nums.get(r.tk); }
+      if (r.kind === "call") { if (isRaw(r)) t.raw++; else t.calls++; t.chars += ev.filtered || 0; if (failedRow(r)) t.failed++; }
+      else if (isTool(r)) { t.outside++; if (ev.ok === false) t.failed++; t.chars += ev.chars || 0; }
+      else if (r.kind === "response") { t.answered = true; if (ev.turns != null) t.logged = ev.turns; }
+      t.end = ev.ts;
+    }
+    if (r.tk && notes.has(r.tk)) {
+      const tev = notes.get(r.tk);
+      notes.delete(r.tk);
+      rows.push({ ev: tev, kind: "note", tk: r.tk, tn: r.tn, via: null, el: null, hidden: false, hay: [tev.said, "#" + tev.n].filter(Boolean).join(" ").toLowerCase() });
+    }
+    rows.push(r);
+  }
+  // The harness counts the turns when it has the transcript; else the tool
+  // turns and the answer.
+  for (const r of rows) if (r.stats) r.stats.api = r.stats.logged != null ? r.stats.logged : r.stats.keys.size;
+  return rows;
+}
+function turnText(r) {
+  const t = r.stats, d = span(r.ev.ts, t.end);
+  return [t.api + " API turns", t.calls + " harno", t.raw ? t.raw + " raw" : "", t.outside ? t.outside + " outside" : "", t.failed ? t.failed + " failed" : "", fmtN(t.chars) + " chars", d ? fmtMs(d) : ""].filter(Boolean).join(" · ");
+}
+// A call no tool call made: a hook at the prompt, or a human in a terminal.
+const noTurn = tk => tk === "loose";
+const turnName = r => r.tk === "loose" ? "no tool call ran this" : "API turn " + (r.tn || "");
+function turnHead(r, i, size, fails) {
+  const label = noTurn(r.tk) ? `<b>${turnName(r)}</b>` : `<b>${turnName(r)}</b>${r.ev.type === "response" ? " · the answer" : ""}`;
+  return `<div class="turnh${noTurn(r.tk) ? " hook" : ""}${S.shut.has(r.tk) ? " shut" : ""}" data-h="${i}" title="Fold or unfold (x)">${label}<span>${size} events</span>${fails ? `<span class="fails">${fails} failed</span>` : ""}<span class="t">${clock(r.ev.ts)}</span></div>`;
+}
+function fold(i) {
+  const tk = S.rows[i] && S.rows[i].tk;
+  if (!tk) return;
+  if (S.shut.has(tk)) S.shut.delete(tk); else S.shut.add(tk);
+  document.querySelectorAll(`.turnh[data-h="${i}"]`).forEach(h => h.classList.toggle("shut", S.shut.has(tk)));
+  applyFilter();
+}
+function foldAll() {
+  if (S.shut.size) S.shut.clear(); else S.rows.forEach(r => { if (r.tk) S.shut.add(r.tk); });
+  renderTimeline();
+}
+function rowHtml(r, i) {
+  const ev = r.ev, t = `<span class="t">${clock(ev.ts)}</span>`;
+  if (r.kind === "note") {
+    return `<div class="ev note" data-i="${i}"><div class="head"><span class="tag">agent</span><span class="turn"></span>${t}</div><div class="text">${esc(ev.said)}</div></div>`;
+  }
+  if (r.kind === "call") {
+    const bad = failedRow(r), cut = ev.output > ev.filtered;
+    const meta = ev.refused
+      ? `#${ev.n} · ${esc(ev.refused)}`
+      : `#${ev.n} · ${fmtMs(ev.ms)} · ${fmtN(ev.filtered)} chars${cut ? ` <span class="badge" title="A filter cut ${fmtN(ev.output - ev.filtered)} chars">filtered</span>` : ""}`;
+    return `<div class="ev query${bad ? " fail" : ""}${isRaw(r) ? " raw" : ""}" data-i="${i}"><div class="head"><span class="dot ${bad ? "fail" : "ok"}"></span><code class="cmd">${esc(r.cmd)}</code>${t}</div><div class="meta">${meta}${ev.why ? " · why: " + esc(ev.why) : ""}</div></div>`;
+  }
+  if (ev.type === "session") {
+    return `<div class="ev session" data-i="${i}">session ${esc(ev.event)}${ev.source ? " · " + esc(ev.source) : ""}${ev.reason ? " · " + esc(ev.reason) : ""} · ${clock(ev.ts)}</div>`;
+  }
+  if (ev.type === "prompt" || ev.type === "response") {
+    const who = ev.type === "prompt" ? (r.queued ? "human → agent · while it worked" : "human → agent") : "agent → human";
+    return `<div class="ev ${ev.type}" data-i="${i}"><div class="head"><span class="tag">${who}</span><span class="turn">${r.stats ? turnText(r) : ""}</span>${t}</div><div class="text">${esc(ev.text)}</div></div>`;
+  }
+  const name = ev.type === "tool" ? ev.tool : "subagent · " + (ev.agent || "subagent");
+  const bad = ev.ok === false;
+  const how = r.warn ? "runs harno, but harno is not its first word" : r.alone ? "harno logged no call for it" : "outside harno";
+  return `<div class="ev outside${r.warn ? " warn" : ""}${bad ? " fail" : ""}" data-i="${i}"><div class="head"><span class="tag out">${esc(name)}</span><code class="cmd">${esc(ev.summary)}</code>${t}</div><div class="meta">#${ev.n} · ${bad ? "failed · " : ""}${fmtN(ev.chars)} chars · ${how}</div></div>`;
+}
+function renderTimeline() {
+  const box = $("#events");
+  if (!S.rows.length) {
+    box.innerHTML = "<div class=\"empty\">This session has no events yet.</div>";
+    $("#nomatch").hidden = true;
+    return;
+  }
+  // Each turn is its own box, so its sticky header leaves with it.
+  const html = [];
+  let open = false;
+  for (let i = 0; i < S.rows.length; i++) {
+    const r = S.rows[i], prev = S.rows[i - 1], starts = !!r.tk && (!prev || prev.tk !== r.tk);
+    if (open && (starts || !r.tk)) { html.push("</div>"); open = false; }
+    if (starts) {
+      let j = i, fails = 0;
+      for (; j < S.rows.length && S.rows[j].tk === r.tk; j++) if (FILTERS.failed(S.rows[j])) fails++;
+      html.push("<div class=\"turn\">" + turnHead(r, i, j - i, fails));
+      open = true;
+    }
+    html.push(rowHtml(r, i));
+  }
+  if (open) html.push("</div>");
+  box.innerHTML = html.join("");
+  const els = box.querySelectorAll(".ev");
+  S.rows.forEach((r, i) => { r.el = els[i]; });
+  applyFilter();
+  if (S.sel >= 0) S.rows[S.sel].el.classList.add("sel");
+}
+function applyFilter() {
+  const flat = S.filter !== "all" || !!S.q;
+  let shown = 0;
+  for (const r of S.rows) {
+    // A folded turn hides its rows; a filter shows every match, folded or not.
+    r.hidden = !(FILTERS[S.filter](r) && (!S.q || r.hay.includes(S.q))) || (!flat && !!r.tk && S.shut.has(r.tk));
+    if (r.el) r.el.hidden = r.hidden;
+    if (!r.hidden) shown++;
+  }
+  // The turn headers only make sense over the whole session.
+  $("#events").classList.toggle("flat", flat);
+  $("#nomatch").hidden = shown > 0 || !S.rows.length || !flat;
+}
+function setFilter(f) {
+  S.filter = f; store.set("filter", f);
+  document.querySelectorAll("#chips button").forEach(b => b.classList.toggle("on", b.dataset.f === f));
+  applyFilter();
+}
+// The gate log holds no word of an agent, so the chips that count them are out
+// of the bar while harno is the open log, and a filter on one of them goes back
+// to all.
+function renderChips() {
+  const gate = S.src === "harno";
+  document.querySelectorAll("#chips button").forEach(b => { b.hidden = gate && (b.dataset.f === "outside" || b.dataset.f === "chat"); });
+  if (gate && (S.filter === "outside" || S.filter === "chat")) setFilter("all");
+}
+function renderStats() {
+  const c = { all: 0, harno: 0, raw: 0, outside: 0, chat: 0, failed: 0 };
+  let chars = 0, prompts = 0, api = 0;
+  for (const r of S.rows) {
+    for (const f in FILTERS) if (FILTERS[f](r)) c[f]++;
+    if (r.kind === "call") chars += r.ev.filtered || 0;
+    if (isTool(r)) chars += r.ev.chars || 0;
+    if (r.stats) { prompts++; api += r.stats.api; }
+  }
+  document.querySelectorAll("#chips button").forEach(b => { b.querySelector("b").textContent = c[b.dataset.f]; b.classList.toggle("on", b.dataset.f === S.filter); });
+  const all = [...S.events, ...S.calls].map(x => x.ts).sort();
+  const d = all.length ? span(all[0], all[all.length - 1]) : null;
+  $("#stats").textContent = S.rows.length
+    ? `${prompts} prompts · ${api} API turns · ${c.harno} harno · ${c.raw} raw · ${c.outside} outside${c.failed ? ` · ${c.failed} failed` : ""} · ${fmtN(chars)} chars read${d ? " · " + fmtMs(d) : ""}`
+    : "";
+}
+
+// ── Selection: cheap per step; the fetch and the camera wait for a pause ──
+function select(i) {
+  const r = S.rows[i];
+  if (!r) return;
+  if (S.sel >= 0 && S.rows[S.sel] && S.rows[S.sel].el) S.rows[S.sel].el.classList.remove("sel");
+  S.sel = i;
+  r.el.classList.add("sel");
+  r.el.scrollIntoView({ block: "nearest" });
+  writeHash();
+  showDetail(r);
+}
+function step(d, pred = r => !r.hidden) {
+  for (let i = S.sel + d; i >= 0 && i < S.rows.length; i += d) if (pred(S.rows[i])) return select(i);
+}
+// The first visible row of the next or previous API turn.
+function stepTurn(d) {
+  const cur = S.rows[S.sel], key = r => r.tk || rowKey(r);
+  let i = S.sel + d;
+  if (d < 0) {
+    while (i >= 0 && (S.rows[i].hidden || (cur && key(S.rows[i]) === key(cur)))) i--;
+    if (i < 0) return;
+    const k = key(S.rows[i]);
+    while (i > 0 && key(S.rows[i - 1]) === k) i--;
+    while (i < S.rows.length && S.rows[i].hidden) i++;
+    return select(i);
+  }
+  while (i < S.rows.length && (S.rows[i].hidden || (cur && key(S.rows[i]) === key(cur)))) i++;
+  if (i < S.rows.length) select(i);
+}
+function edge(d) {
+  const i = d > 0 ? S.rows.findIndex(r => !r.hidden) : S.rows.map(r => !r.hidden).lastIndexOf(true);
+  if (i >= 0) select(i);
+}
+function writeHash() {
+  clearTimeout(hashTimer);
+  hashTimer = setTimeout(() => {
+    const r = S.rows[S.sel], h = "#src=" + enc(S.src || "") + "&s=" + enc(S.id || "") + (r ? "&e=" + rowKey(r) : "");
+    if (location.hash !== h) history.replaceState(null, "", h);
+  }, 300);
+}
+function readHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  return { src: p.get("src"), s: p.get("s"), e: p.get("e") };
+}
+function placeholder() {
+  $("#detail").innerHTML = S.rows.length
+    ? "<div class=\"empty\"><p>Pick an event on the left.</p><p class=\"hint\"><kbd>j</kbd> <kbd>k</kbd> step through · <kbd>t</kbd> <kbd>T</kbd> API turns · <kbd>n</kbd> <kbd>p</kbd> prompts · <kbd>/</kbd> filter · <kbd>?</kbd> every key</p></div>"
+    : "";
+}
+
+// ── The detail of an event ──
+const CAP = 60000;
+function sec(title, text, cls, render) {
+  const i = texts.push(text) - 1, long = text.length > CAP;
+  return `<div class="sec"><div class="sec-h">${title}<span class="muted">${fmtN(text.length)} chars</span><button class="btn sm" data-act="copy" data-t="${i}">Copy</button></div>`
+    + (text ? `<pre class="${cls}">${(render || esc)(long ? text.slice(0, CAP) : text)}</pre>` : "<div class=\"muted\">(empty)</div>")
+    + (long ? `<button class="btn more" data-act="more" data-t="${i}">Show the other ${fmtN(text.length - CAP)} chars</button>` : "")
+    + "</div>";
+}
+function head(r) {
+  const ev = r.ev;
+  if (r.kind === "note") {
+    return `<div class="d-head"><span class="pill response">agent</span><span class="muted">${turnName(r)} · ${clock(ev.ts)} · what the agent wrote before its tool calls</span></div>`;
+  }
+  if (r.kind === "call") {
+    const st = ev.refused ? "fail" : failedRow(r) ? "fail" : "ok", i = texts.push(r.cmd) - 1;
+    const label = { ok: "ok", fail: "failed" }[st];
+    const cut = ev.output > ev.filtered ? ` · filtered from ${fmtN(ev.output)}` : "";
+    return `<div class="d-head"><span class="pill ${st}">${label}</span><span class="d-title">harno ${esc(ev.verb)}</span>`
+      + `<span class="muted">#${ev.n} · ${turnName(r)} · ${clock(ev.ts)} · ${fmtMs(ev.ms)}${ev.refused ? "" : ` · ${fmtN(ev.filtered)} chars returned${cut}`}</span></div>`
+      + `<div class="cmdbox"><pre>${esc(r.cmd)}</pre><button class="btn sm" data-act="copy" data-t="${i}" title="Copy (c)">Copy</button></div>`
+      + (r.via
+        ? `<div class="why"><span class="muted">via ${esc(r.via.tool || "tool")} #${r.via.n}</span> <code>${esc(r.via.summary)}</code>${startsHarno(r.via.summary) ? "" : " <span class=\"badge warn\">harno is not its first word</span>"}</div>`
+        : "<div class=\"why muted\">No tool call ran this: a hook or a human did.</div>")
+      + (ev.why ? `<div class="why"><span class="muted">why</span> ${esc(ev.why)}</div>` : "")
+      + (ev.cmd ? ranBlock(ev) : "");
+  }
+  if (isTool(r)) {
+    const name = ev.type === "tool" ? ev.tool : "subagent · " + (ev.agent || "subagent"), i = texts.push(ev.summary || "") - 1;
+    const pill = (ev.ok === false ? "<span class=\"pill fail\">failed</span>" : "")
+      + (r.warn ? "<span class=\"pill fail\">runs harno, not first</span>" : "<span class=\"pill outside\">outside harno</span>");
+    return `<div class="d-head">${pill}<span class="d-title">${esc(name)}</span><span class="muted">#${ev.n} · ${turnName(r)} · ${clock(ev.ts)} · ${fmtN(ev.chars)} chars returned</span></div>`
+      + `<div class="cmdbox"><pre>${esc(ev.summary)}</pre><button class="btn sm" data-act="copy" data-t="${i}" title="Copy (c)">Copy</button></div>`;
+  }
+  if (ev.type === "prompt" || ev.type === "response") {
+    const who = ev.type === "prompt" ? "human → agent" : "agent → human";
+    return `<div class="d-head"><span class="pill ${ev.type}">${ev.type}</span><span class="muted">#${ev.n} · ${who} · ${clock(ev.ts)}${r.stats ? " · this prompt: " + turnText(r) : ""}${ev.turns != null ? " · " + ev.turns + " API turns" : ""}</span></div>`;
+  }
+  return `<div class="d-head"><span class="pill">session ${esc(ev.event)}</span><span class="muted">#${ev.n} · ${esc(ev.ts)}${ev.source ? " · " + esc(ev.source) : ""}${ev.reason ? " · " + esc(ev.reason) : ""}</span></div>`;
+}
+// What harno ran, with the preset opened out. The call above already says what was
+// asked for, so this stays folded; its summary counts the commands and the failures.
+function ranBlock(ev) {
+  const exits = ev.exit || [], fails = brokeOf(ev), bad = fails.filter(Boolean).length;
+  const what = ev.cmd.length === 1 ? "1 command" : ev.cmd.length + " commands";
+  return `<details class="ran"><summary>ran <span class="muted">${what}${bad ? " · " + bad + " failed" : ""}</span></summary>`
+    + `<div class="chipline">${ev.cmd.map((c, k) => `<code class="chip${fails[k] ? " fail" : ""}">${esc(c)}${exits[k] ? " · exit " + exits[k] : ""}</code>`).join("")}</div></details>`;
+}
+function callBody(r, c) {
+  shownOut = c.out ?? "";
+  if (r.kind === "call") {
+    let h = sec("Output <span class=\"muted\">what the agent read</span>", c.out ?? "", "out");
+    if (c.raw != null) h += rawSec(c.raw, shownOut, r.ev.n);
+    return h;
+  }
+  let h = "";
+  if (c.in != null) h += sec("Input", c.in, "in");
+  h += sec(r.ev.ok === false ? "Error" : "Output", c.out ?? "", "out");
+  return h;
+}
+function showDetail(r) {
+  const seq = ++detailSeq, ev = r.ev, session = S.id;
+  clearTimeout(detailTimer);
+  if (detailAbort) { detailAbort.abort(); detailAbort = null; }
+  texts = [];
+  const said = r.kind === "note" ? () => sec("Said", ev.said || "", "prose") : () => "";
+  const url = r.kind === "call" ? `/api/call/${enc(session)}/${ev.n}` : isTool(r) ? `/api/event/${enc(session)}/${ev.n}` : null;
+  const key = url, cached = key == null ? null : calls.get(key);
+  let body = "";
+  if (r.kind === "note") body = said();
+  else if (ev.type === "prompt" || ev.type === "response") body = sec(ev.type === "prompt" ? "Prompt" : "Response", ev.text || "", "prose");
+  else if (r.kind === "call" && ev.refused) body = `<div class="empty">Nothing ran: ${esc(ev.refused)}</div>`;
+  else if (url) body = cached ? callBody(r, cached) : "<div class=\"empty loading\">Loading…</div>";
+  const box = $("#detail");
+  box.innerHTML = head(r) + `<div id="d-body">${body}</div>`;
+  box.scrollTop = 0;
+  if (url == null || cached || (r.kind === "call" && ev.refused)) return;
+  detailTimer = setTimeout(async () => {
+    const ac = detailAbort = new AbortController();
+    try {
+      const got = await getJSON(url, ac.signal);
+      if (got.out != null) calls.set(key, got);
+      if (seq !== detailSeq) return;
+      $("#d-body").innerHTML = said() + callBody(r, got);
+    } catch (e) {
+      if (e.name === "AbortError" || seq !== detailSeq) return;
+      $("#d-body").innerHTML = `<div class="empty">${e.status === 404 ? "Nothing was recorded for this line." : "Could not load: " + esc(e.message)}</div>`;
+    }
+  }, 70);
+}
+// ── What the agent read, and what the command wrote ──
+// A filter picks lines out of what the command wrote and cleans them, so a
+// line reached the agent when its cleaned form is in what the call returned.
+const bare = s => s.replace(/\x1b\[[0-9;?]*[ -\/]*[@-~]/g, "").replace(/\s+$/, "");
+function keptLines(raw, out) {
+  const have = new Set(out.split("\n").map(bare));
+  const marks = raw.split("\n").map(l => (bare(l) === "" ? null : have.has(bare(l))));
+  return { marks, kept: marks.filter(m => m === true).length, total: marks.filter(m => m !== null).length };
+}
+function markKept(marks) {
+  return text => text.split("\n").map((l, i) => {
+    const h = esc(l);
+    return marks[i] === true ? `<span class="keep">${h}</span>` : marks[i] === false ? `<span class="cut">${h}</span>` : h;
+  }).join("\n");
+}
+// What the commands wrote, with the lines that reached the agent marked.
+function rawSec(text, out, n) {
+  const k = keptLines(text, out);
+  return sec(`What the commands wrote <span class="muted">${fmtN(k.kept)} of ${fmtN(k.total)} lines reached the agent · call #${n}</span>`, text, "raw", markKept(k.marks));
+}
+function onAct(e) {
+  const a = e.target.closest("[data-act], [data-row]");
+  if (!a) return;
+  if (a.dataset.row != null) return select(Number(a.dataset.row));
+  const t = texts[Number(a.dataset.t)];
+  if (a.dataset.act === "copy") copy(t);
+  else if (a.dataset.act === "more") { a.previousElementSibling.innerHTML = esc(t); a.remove(); }
+}
+
+// ── Sessions ──
+// A session belongs to one log: `harno` holds the calls no harness opened, a
+// plain shell logging to `manual-<date>`, and a harness holds the sessions it
+// opened, its own words with the calls they made under them. The log is picked
+// first, and the session list is what that log holds.
+const sources = () => ["harno", ...[...new Set(sessions.map(s => s.harness).filter(Boolean))].sort()];
+const holds = (src, s) => src === "harno" ? !!s.gate && !s.harness : s.harness === src;
+const inSource = s => holds(S.src, s);
+const what = n => n === "harno" ? "the calls no harness opened" : "its own words, with those calls under them";
+// In the gate log a session is named by its first command: the prompt above it
+// belongs to the harness, and under harno there is no harness.
+const labelOf = s => (S.src === "harno" && s.gate_label ? s.gate_label : s.label) || s.id;
+function renderSources() {
+  $("#sources").innerHTML = "<div class=\"h\">Which log</div>" + sources()
+    .map(n => {
+      const mine = sessions.filter(s => holds(n, s)).length;
+      return `<button class="log${n === S.src ? " on" : ""}" data-src="${esc(n)}"><span class="n">${esc(n)}<i>${mine} session${mine === 1 ? "" : "s"}</i></span><span class="d">${esc(what(n))}</span></button>`;
+    })
+    .join("");
+}
+function setSource(n) {
+  if (n === S.src) return;
+  S.src = n;
+  store.set("src", n);
+  renderSources();
+  renderSessions();
+  renderChips();
+  // The picker stays open on a log: the session list beside it is the point.
+  const cur = sessions.find(x => x.id === S.id);
+  if (cur && inSource(cur)) return loadSession(S.id, S.sel >= 0 ? rowKey(S.rows[S.sel]) : null, true);
+  S.id = null; S.rows = []; S.sel = -1;
+  $("#pick-label").textContent = "Pick a session";
+  $("#events").innerHTML = `<div class="empty">${esc(n)}: ${esc(what(n))}. Pick a session on the right.</div>`;
+  renderStats();
+}
+// A session that ran on is stamped by both ends: the first call and, when it
+// falls on another minute, the last, the day of it left out when it is the same.
+const when = s => { const a = stamp(s.ts), b = stamp(s.last); if (a === b) return a; const day = t => t.split(", ")[0], hm = t => t.split(", ")[1]; return a + " → " + (day(a) === day(b) ? hm(b) : b); };
+function renderSessions() {
+  const q = $("#session-q").value.trim().toLowerCase();
+  const mine = sessions.filter(inSource);
+  const list = mine.filter(s => !q || (s.label + " " + s.id).toLowerCase().includes(q));
+  $("#session-count").textContent = list.length + " of " + mine.length;
+  $("#session-list").innerHTML = list.length
+    ? list.map(s => `<button class="s${s.id === S.id ? " cur" : ""}" data-id="${esc(s.id)}" title="${esc(s.id)}"><span class="t">${esc(when(s))}</span><span class="l">${isLive(s) ? "<i class=\"live-dot\" title=\"live\"></i>" : ""}${esc(labelOf(s))}</span><span class="q">${s.calls} calls</span></button>`).join("")
+    : `<div class="empty">${S.src ? "No session matches." : "Pick a log on the left."}</div>`;
+}
+function openPicker() {
+  $("#sessions").hidden = false;
+  $("#pick").setAttribute("aria-expanded", "true");
+  renderSources();
+  renderSessions();
+  if (Date.now() - sessionsAt > 10000) reloadSessions(true);
+  const cur = $("#session-list .s.cur");
+  if (cur) cur.scrollIntoView({ block: "nearest" });
+  $("#session-q").focus();
+  $("#session-q").select();
+}
+function closePicker() {
+  $("#sessions").hidden = true;
+  $("#pick").setAttribute("aria-expanded", "false");
+}
+function movePick(d) {
+  const items = [...document.querySelectorAll("#session-list .s")];
+  if (!items.length) return;
+  const cur = items.findIndex(b => b.classList.contains("kb"));
+  const next = items[Math.max(0, Math.min(items.length - 1, cur + d))];
+  items.forEach(b => b.classList.remove("kb"));
+  next.classList.add("kb");
+  next.scrollIntoView({ block: "nearest" });
+}
+async function loadSession(id, key = null, keep = false) {
+  if (!keep) closePicker();
+  S.id = id;
+  const s = sessions.find(x => x.id === id);
+  $("#pick-label").textContent = (S.src ? S.src + " · " : "") + (s ? stamp(s.ts) + " · " + labelOf(s) : id);
+  $("#pick").title = (s ? labelOf(s) + "\n" : "") + id + "\n" + (S.src ? "log: " + S.src + "\n" : "") + "Switch log or session (s)";
+  let log = logs.get(id);
+  if (!log) {
+    $("#events").innerHTML = "<div class=\"empty loading\">Loading the session…</div>";
+    try { log = await getJSON("/api/log/" + enc(id)); } catch (e) {
+      if (S.id === id) $("#events").innerHTML = `<div class="empty">Could not load this session: ${esc(e.message)}</div>`;
+      return;
+    }
+    logs.set(id, log);
+  }
+  if (S.id !== id) return;
+  // A session of `harno` has no harness, so it carries the calls alone.
+  S.harness = log.harness;
+  S.events = log.events || [];
+  S.calls = log.calls || [];
+  S.rows = buildRows(S.events, S.calls); S.sel = -1; S.shut = new Set();
+  renderChips();
+  renderTimeline(); renderStats();
+  $("#events").scrollTop = 0;
+  const i = key == null ? -1 : S.rows.findIndex(r => rowKey(r) === key);
+  if (i >= 0) select(i); else { placeholder(); writeHash(); }
+  follow();
+  if (liveOn) poll();
+}
+
+// ── Live: the open session, while live, asks for its new events every 2 s; nothing else polls ──
+function follow() {
+  const on = isLive(sessions.find(x => x.id === S.id));
+  $("#pick-live").hidden = !on;
+  if (on === liveOn) return;
+  liveOn = on;
+  clearInterval(liveTimer);
+  if (on) liveTimer = setInterval(poll, 2000);
+}
+let sessionsAt = Date.now();
+async function reloadSessions(quiet) {
+  try {
+    sessions = await getJSON("/api/sessions");
+    sessionsAt = Date.now();
+    if (!$("#sessions").hidden) renderSessions();
+    follow();
+    if (!quiet) toast("Sessions reloaded");
+  } catch (e) { if (!quiet) toast("Could not reload"); }
+}
+async function poll() {
+  if (polling || document.hidden || !S.id) return;
+  polling = true;
+  const id = S.id;
+  try {
+    const lastCall = S.calls.length ? S.calls[S.calls.length - 1].n : 0;
+    const lastEvent = S.events.length ? S.events[S.events.length - 1].n : 0;
+    const add = await getJSON(`/api/log/${enc(id)}?calls=${lastCall}&events=${lastEvent}`);
+    if ((add.calls.length || add.events.length) && id === S.id) {
+      S.calls = S.calls.concat(add.calls);
+      S.events = S.events.concat(add.events);
+      logs.set(id, { harness: S.harness, calls: S.calls, events: S.events });
+      const s = sessions.find(x => x.id === id), se = add.events.filter(e => e.type === "session").pop();
+      const last = [...add.calls, ...add.events].map(x => x.ts).sort().pop();
+      if (s) { if (last) s.last = last; if (se) s.ended = se.event === "end"; }
+      refreshRows();
+    }
+    follow();
+  } catch (e) { /* the next tick tries again */ } finally { polling = false; }
+}
+function refreshRows() {
+  // Rebuilding the list empties the box, so the place the human is reading
+  // is kept by hand; only a reader already at the end follows the new lines.
+  const box = $("#events"), atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
+  const top = box.scrollTop;
+  const old = S.rows[S.sel], sel = old ? rowKey(old) : null;
+  S.rows = buildRows(S.events, S.calls); S.sel = -1;
+  renderTimeline(); renderStats();
+  const i = sel == null ? -1 : S.rows.findIndex(r => rowKey(r) === sel);
+  if (i >= 0) { S.sel = i; S.rows[i].el.classList.add("sel"); }
+  box.scrollTop = atEnd ? box.scrollHeight : top;
+}
+
+// ── Theme, resizing, keys ──
+function setTheme(t) {
+  if (t === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  store.set("theme", t);
+  $("#theme").textContent = { auto: "◐", light: "☀", dark: "☾" }[t];
+  $("#theme").title = "Theme: " + t;
+}
+function currentText() {
+  const r = S.rows[S.sel];
+  if (!r) return "";
+  return (r.kind === "note" ? r.ev.said : r.cmd || r.ev.summary || r.ev.text) || "";
+}
+document.addEventListener("keydown", e => {
+  const typing = e.target.closest && e.target.closest("input, textarea, select");
+  if (e.key === "Escape") {
+    if (!$("#help").hidden) $("#help").hidden = true;
+    else if (!$("#sessions").hidden) closePicker();
+    else if (typing) e.target.blur();
+    else if (S.q) { $("#q").value = ""; S.q = ""; applyFilter(); }
+    return;
+  }
+  if (!$("#sessions").hidden) {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); movePick(e.key === "ArrowDown" ? 1 : -1); }
+    else if (e.key === "Enter") { e.preventDefault(); const b = $("#session-list .s.kb") || $("#session-list .s"); if (b) loadSession(b.dataset.id); }
+    return;
+  }
+  if (typing) {
+    if (e.key === "Enter" && e.target.id === "q") { e.target.blur(); if (S.sel < 0 || S.rows[S.sel].hidden) step(1); }
+    return;
+  }
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const isPrompt = r => !r.hidden && r.ev.type === "prompt";
+  const act = {
+    j: () => step(1), ArrowDown: () => step(1), k: () => step(-1), ArrowUp: () => step(-1),
+    t: () => stepTurn(1), T: () => stepTurn(-1), X: foldAll,
+    x: () => { let i = S.sel; if (i < 0 || !S.rows[i].tk) return; while (i > 0 && S.rows[i - 1].tk === S.rows[i].tk) i--; fold(i); },
+    n: () => step(1, isPrompt), p: () => step(-1, isPrompt),
+    g: () => edge(1), Home: () => edge(1), G: () => edge(-1), End: () => edge(-1),
+    "/": () => $("#q").focus(), s: openPicker, c: () => copy(currentText()),
+    "?": () => { $("#help").hidden = !$("#help").hidden; },
+  }[e.key];
+  if (act) { e.preventDefault(); act(); }
+});
+$("#events").addEventListener("click", e => {
+  const h = e.target.closest(".turnh");
+  if (h) {
+    // A stuck header takes you to the start of its turn; one in place folds it.
+    const turn = h.parentElement;
+    if (turn.getBoundingClientRect().top < $("#events").getBoundingClientRect().top - 1) return turn.scrollIntoView({ block: "start" });
+    return fold(Number(h.dataset.h));
+  }
+  const d = e.target.closest(".ev");
+  if (d) select(Number(d.dataset.i));
+});
+$("#detail").addEventListener("click", onAct);
+$("#chips").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setFilter(b.dataset.f); });
+let qTimer = 0;
+$("#q").addEventListener("input", e => { clearTimeout(qTimer); qTimer = setTimeout(() => { S.q = e.target.value.trim().toLowerCase(); applyFilter(); }, 120); });
+$("#pick").addEventListener("click", () => ($("#sessions").hidden ? openPicker() : closePicker()));
+$("#session-q").addEventListener("input", renderSessions);
+$("#session-list").addEventListener("click", e => { const b = e.target.closest(".s"); if (b) loadSession(b.dataset.id); });
+$("#session-reload").addEventListener("click", () => reloadSessions(false));
+$("#sources").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setSource(b.dataset.src); });
+// A click on a log rebuilds the picker under the pointer: a target already out of the document is not a click outside.
+document.addEventListener("click", e => { if (!$("#sessions").hidden && e.target.isConnected && !e.target.closest("#sessions, #pick")) closePicker(); });
+$("#theme").addEventListener("click", () => { const t = document.documentElement.dataset.theme || "auto"; setTheme({ auto: "light", light: "dark", dark: "auto" }[t]); });
+$("#help-btn").addEventListener("click", () => { $("#help").hidden = false; });
+$("#help").addEventListener("click", e => { if (e.target.id === "help") $("#help").hidden = true; });
+document.addEventListener("visibilitychange", () => { if (!document.hidden && liveOn) poll(); });
+
+(function vsplit() {
+  const bar = $("#vsplit"), main = $("main"), saved = Number(store.get("timelineW"));
+  if (saved > 0) main.style.setProperty("--tw", saved + "px");
+  bar.addEventListener("pointerdown", e => {
+    bar.setPointerCapture(e.pointerId);
+    bar.classList.add("drag");
+    let w = 0;
+    const move = ev => { w = Math.round(Math.max(220, Math.min(window.innerWidth - 320, ev.clientX))); main.style.setProperty("--tw", w + "px"); };
+    const up = () => {
+      bar.classList.remove("drag");
+      bar.removeEventListener("pointermove", move);
+      bar.removeEventListener("pointerup", up);
+      if (w) store.set("timelineW", w);
+    };
+    bar.addEventListener("pointermove", move);
+    bar.addEventListener("pointerup", up);
+  });
+})();
+
+setTheme(store.get("theme") || "auto");
+setFilter(S.filter);
+if (!sessions.length) {
+  $("#events").innerHTML = "<div class=\"empty\">No sessions logged yet. The harness hooks write them: see the Guide, The log.</div>";
+} else {
+  // The log comes first, then its sessions; only the hash opens one by itself.
+  const h = readHash();
+  const known = n => !!n && sources().includes(n);
+  S.src = known(h.src) ? h.src : known(store.get("src")) ? store.get("src") : null;
+  renderSources();
+  if (S.src && sessions.some(s => s.id === h.s && inSource(s))) loadSession(h.s, h.e);
+  else if (S.src) {
+    $("#pick-label").textContent = "Pick a session";
+    $("#events").innerHTML = "<div class=\"empty\">No session open. Pick one above, or press <kbd>s</kbd>.</div>";
+  } else {
+    $("#pick-label").textContent = "Pick a log";
+    $("#events").innerHTML = "<div class=\"empty\">Pick a log, then a session: <b>harno</b> is the calls no harness opened, a harness is its own words with those calls under them. Press <kbd>s</kbd> to open the picker.</div>";
+    openPicker();
+  }
+}
+</script>
+</body>
+</html>

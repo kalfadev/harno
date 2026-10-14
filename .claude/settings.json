@@ -1,0 +1,127 @@
+{
+  "autoInstallIdeExtension": false,
+  "permissions": {
+    "defaultMode": "default",
+    "allow": [
+      "Bash(harno:*)"
+    ],
+    "deny": [
+      "Read",
+      "Edit",
+      "Write",
+      "MultiEdit",
+      "NotebookEdit",
+      "NotebookRead",
+      "Glob",
+      "Grep",
+      "LS",
+      "WebFetch",
+      "WebSearch",
+      "Agent",
+      "Task",
+      "mcp__serena__*",
+      "mcp__ide__*",
+      "mcp__plugin_context7_context7__*",
+      "Workflow",
+      "Monitor",
+      "EnterWorktree",
+      "SendMessage",
+      "SendUserFile",
+      "PushNotification",
+      "RemoteTrigger",
+      "CronCreate",
+      "CronList",
+      "CronDelete",
+      "Artifact",
+      "ArtifactComments",
+      "ArtifactData",
+      "ListMcpResourcesTool",
+      "ReadMcpResourceTool",
+      "ReadMcpResourceDirTool",
+      "mcp__claude_ai_Claude_Docs__*"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "allowUnsandboxedCommands": false,
+    "failIfUnavailable": true,
+    "filesystem": {
+      "allowWrite": [
+        "~/.cargo",
+        "~/.rustup",
+        "~/.serena"
+      ]
+    },
+    "network": {
+      "allowedDomains": [
+        "*"
+      ],
+      "allowLocalBinding": true,
+      "allowAllUnixSockets": false
+    }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.harno/tools/claude-code/only-harno.py\""
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.harno/tools/claude-code/hook.py\" session-start"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.harno/tools/claude-code/hook.py\" prompt"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.harno/tools/claude-code/hook.py\" tool"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.harno/tools/claude-code/hook.py\" response"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.harno/tools/claude-code/hook.py\" session-end"
+          }
+        ]
+      }
+    ]
+  }
+}

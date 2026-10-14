@@ -1,0 +1,36 @@
+# Claude Code: harno tool add claude-code copies these files and writes the presets below.
+# The hook scripts turn what Claude Code says (hook input, transcript) into harno log
+# events (hook.py); the start context
+# is the first call of the agent, the $ line of CLAUDE.md, which no hook runs. What reaches
+# .claude/settings.json is install.py, which the human runs through the claude-code
+# preset, outside the sandbox, when the config below says what it should write.
+# harno run claude-code install writes the hooks and what the config asks for, harno run
+# claude-code remove takes them out again; other hooks in the settings file stay. Run it
+# before harno tool remove claude-code: the folder goes, what it wrote does not.
+presets:
+  # claude-code install|remove: the hooks and permissions of this harness in
+  # .claude/settings.json, from the config block below. The sandbox of the agent
+  # refuses that write, so the human runs it outside and starts a new session.
+  claude-code: { seq: ["python3 .harno/tools/claude-code/install.py {args}"] }
+  # session [-- <from n> [<to n>]]: the words of this session in short lines
+  session: { seq: ["python3 .harno/tools/claude-code/session.py {args}"] }
+  # transcript [-- <from hh:mm> [<to>]]: the transcript of this session in short lines, UTC
+  transcript: { seq: ["python3 .harno/tools/claude-code/transcript.py {args}"] }
+config:
+  # true: a PreToolUse hook refuses every Bash call that is not harno (only-harno.py, needs shfmt),
+  # and Bash(harno *) runs without asking. After a change run harno run claude-code install again.
+  strict: true
+  # true: every Bash call runs in the Claude Code sandbox, which writes inside the
+  # project and nowhere else; a write outside it asks the human. After a change run
+  # harno run claude-code install again.
+  sandbox: true
+  # Paths outside the project the sandbox may still write, comma separated.
+  sandbox_write: "~/.cargo, ~/.rustup, ~/.serena"
+  # Paths under the home the sandbox may still read, comma separated; empty: the whole
+  # home is readable. A program a preset runs from the home belongs here.
+  sandbox_read: ""
+  # The tools of Claude Code this project refuses, comma separated: install.py adds them
+  # to permissions.deny and takes none out. Everything the agent does goes through harno,
+  # so a tool that reads, writes, searches, fetches, starts an agent or sends something
+  # outside the log is here; what one of them gave is a preset instead (context7).
+  deny_tools: "Read, Edit, Write, MultiEdit, NotebookEdit, NotebookRead, Glob, Grep, LS, WebFetch, WebSearch, Agent, Task, Workflow, Monitor, EnterWorktree, SendMessage, SendUserFile, PushNotification, RemoteTrigger, CronCreate, CronList, CronDelete, Artifact, ArtifactComments, ArtifactData, ListMcpResourcesTool, ReadMcpResourceTool, ReadMcpResourceDirTool, mcp__serena__*, mcp__ide__*, mcp__plugin_context7_context7__*, mcp__claude_ai_Claude_Docs__*"

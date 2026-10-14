@@ -1,0 +1,24 @@
+# The docs of this repository as one tree. mdmap reads this file itself; the program
+# is its own repository, installed into ~/.cargo/bin.
+roots: [docs/]
+ignore: []  # globs relative to the root, such as drafts/**
+warn:
+  # Characters of prose: the block a verify comment names is a command output and is
+  # not counted (Code map, mdmap reading). A longer node comes with advice to split it.
+  body: 4000
+# What a verify line may run: the words it starts with, and the command they
+# stand for, with {args} taking the rest of the line. An entry without a command
+# runs the line as it is written.
+verify:
+  timeout: 900  # seconds, unless the entry says otherwise
+  run:
+    - command: outline
+      run: python3 .harno/tools/sym/sym.py outline {args}
+    - command: deps
+      run: bash -c "cargo tree -e normal --depth 1 {args} | sed -E 's# [(]/[^)]*[)]##'"  # without the local path of a workspace crate
+
+    - command: usage
+      run: bash -c "cd / && harno help"
+    - command: manual
+      run: bash -c "cd / && harno help --verbose"
+    - mdmap help  # the mdmap of PATH

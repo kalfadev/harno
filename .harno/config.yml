@@ -1,0 +1,354 @@
+version: 1
+# harno config of this repository. The docs settings are in mdmap.yml, which mdmap reads itself.
+# When to use which preset: Working here, Presets {7cf629}.
+
+run:
+  timeout: 900
+  # false here: every Bash call already runs in the Claude Code sandbox, which is the
+  # narrower of the two, and macOS refuses a sandbox inside a sandbox (Claude Code setup,
+  # Permissions). true in a project whose harness does not sandbox its agent.
+  sandbox:
+    enabled: false
+    allow:
+      # Outside the project a command may write here, and nowhere else.
+      # A test writes its project under the temporary directory, and so does every
+      # tool that unpacks or caches there; without it cargo test cannot start.
+      write: ["~/.cargo", "~/.rustup", "~/.serena", "~/.cache", "/tmp", "/var/folders"]
+      # What a command may read. ["*"] is every path; a narrower list is the
+      # whole of what may be read.
+      read: ["*"]
+    deny:
+      # Paths closed to reads; a path here beats every allow above.
+      # Empty: nothing is closed.
+      read: []
+
+  # What harno run "<command>" may start, matched on its first words; a verify line in the docs has its own
+  # list, verify.run in mdmap.yml.
+  # {command: <words>, timeout: <seconds>} gives an entry its own timeout; the longest match wins.
+  # Anything else: harno run --raw "<command>" --why "<reason>".
+  allow:
+    # rust
+    - cargo build
+    - cargo check
+    - cargo test
+    - cargo nextest
+    - cargo clippy
+    - cargo tree
+    # git: commits go through the commit and implement presets; never push
+    - git status
+    # No git diff: it answers with the whole patch, where the diff preset answers with
+    # difft and diffstat with the summary. Both take any argument after --.
+    - git log
+    - git show
+    - git blame
+    - git mv
+    - git rm
+    - git restore
+    - git stash
+    - git branch
+    # search
+    - rg
+
+  # harno run <preset> <args>: the words after the preset go where {args} is; the comment above a preset shows them.
+  # Inside --seq and --par an item takes them after --: "<preset> -- <args>".
+  # A preset runs its commands without run.allow, on purpose: a command the agent may run only as written
+  # goes into a preset, not into allow. An item may name another preset.
+  presets:
+
+    # ── reading code ──
+    # modules -- harno [--focus-on harno::run]
+    modules: { seq: ["cargo modules structure --lib -p {args}"] }
+    # api -- harno
+    api: { seq: ["cargo public-api --omit blanket-impls,auto-trait-impls,auto-derived-impls -p {args}"] }
+    # deps [-- -p harno]
+    deps: { seq: ["cargo tree -e normal --depth 1 {args}"] }
+    # sizes -- crates/harno/src
+    sizes: { seq: ["tokei --files --compact --sort code --types Rust {args}"] }
+    # outline -- crates/harno/src/run.rs
+    outline: { seq: ["python3 .harno/tools/sym/sym.py outline {args}"] }
+    # def -- exec Graph::load
+    def: { seq: ["python3 .harno/tools/sym/sym.py def {args}"] }
+    # body -- exec Graph::load [--in <file>]
+    body: { seq: ["python3 .harno/tools/sym/sym.py body {args}"] }
+    # show -- <file> -r 40:90
+    show: { seq: ["bat --style=numbers --decorations=always --color=never --paging=never {args}"] }
+    # refs -- load_config crates/
+    refs: { seq: ["rg -n -w --no-heading {args}"] }
+    # calls -- exec: every line where the name stands before an open parenthesis, its definition too
+    calls: { seq: ["rg -n --no-heading -e '\\b{args}\\(' crates tools"] }
+    # fn -- exec: the Rust function or method of that name, whole, from ast-grep
+    fn:
+      seq:
+        - >-
+          bash -c 'ast-grep scan --json=stream --inline-rules "{id: fn, language: rust, rule: {kind: function_item, has: {field: name, regex: ^{args}\$}}}" crates tools
+          | jq -rn "[inputs] | if . == [] then \"not found\" else .[] | \"── \(.file):\(.range.start.line + 1)\n\(.lines)\" end"'
+    # serena -- find_referencing_symbols -p '{"name_path": "exec", "relative_path": "crates/harno/src/run.rs"}'
+    # Serena over MCP with mcptools as the client: each call starts a server for one tool, about 2 s.
+    # mcptools exits 0 on a tool error; jq prints the text and exits 1 when the result says isError.
+    serena:
+      seq:
+        - >-
+          bash -c 'mcptools call "$@" -f json serena start-mcp-server --project-from-cwd --context agent --enable-web-dashboard false --open-web-dashboard false --enable-gui-log-window false --log-level ERROR
+          | jq -r ".content[].text, (if .isError then \"\" | halt_error(1) else empty end)"' serena {args}
+    # serena-tools: every Serena tool with its parameters
+    serena-tools: { seq: ["mcptools tools serena start-mcp-server --project-from-cwd --context agent --enable-web-dashboard false --open-web-dashboard false --enable-gui-log-window false --log-level ERROR"] }
+    # graph: the code graph that affected and explain read, written to graphify-out/ (.graphifyignore keeps .harno/ out)
+    graph: { seq: [graphify extract . --code-only --no-cluster] }
+    # affected -- "name()"
+    affected: { seq: [graph, "graphify affected {args} --graph graphify-out/graph.json"] }
+    # explain -- "name()"
+    explain: { seq: [graph, "graphify explain {args} --graph graphify-out/graph.json"] }
+
+    # ── the commands of this repository ──
+    # manual: harno help --verbose outside a project, the manual the Guide shows
+    manual: { seq: ["bash -c 'cd / && harno help --verbose'"] }
+    # usage: harno help outside a project, the core usage the Guide shows
+    usage: { seq: ["bash -c 'cd / && harno help'"] }
+    # mdmap <verb> …: the docs; harno run mdmap help. The mdmap of PATH (~/.cargo/bin), which
+    # its own repository installs; an item named like its preset is that program.
+    mdmap: { seq: ["mdmap {args}"] }
+    # analytics [-- --port N | --background | --stop]: the session log on a local read-only page
+    analytics: { seq: [".harno/tools/analytics/bin/analytics {args}"] }
+    # page -- "<js expression>": the analytics page on a first load in headless Chrome
+    page: { seq: ["node tools/analytics/tests/page.mjs {args}"] }
+    # session [-- <from n> [<to n>]]: the words of this Claude Code session in short lines
+    session: { seq: ["python3 .harno/tools/claude-code/session.py {args}"] }
+    # transcript [-- <from hh:mm> [<to>]]: the Claude Code transcript in short lines, UTC
+    transcript: { seq: ["python3 .harno/tools/claude-code/transcript.py {args}"] }
+    # claude-code install|remove: the hooks and permissions of the Claude Code harness in
+    # .claude/settings.json, from the config block of its tool.yml. harno tool add writes
+    # nothing; this preset does, and the sandbox refuses the write, so the human runs it outside.
+    claude-code: { seq: ["python3 .harno/tools/claude-code/install.py {args}"] }
+    # The context7 MCP tools are denied (Permissions): the REST API of context7 is what
+    # these two presets call, so a library lookup is logged like every other call.
+    # context7-search -- nextjs: the libraries context7 has for a name, best first; one word
+    context7-search:
+      seq:
+        - >-
+          bash -c 'curl -sS -m 30 --get --data-urlencode "query=$1" https://context7.com/api/v1/search
+          | jq -r ".results[0:10][] | [.id, .totalSnippets, .trustScore, .title] | @tsv"' c7 {args}
+    # context7 -- /vercel/next.js [<topic>] [<tokens>]: the docs of a library, 2000 tokens by default
+    context7:
+      seq:
+        - >-
+          bash -c 'curl -sS -m 60 --get --data-urlencode type=txt --data-urlencode "topic=${2-}"
+          --data-urlencode "tokens=${3-2000}" "https://context7.com/api/v1/${1#/}"' c7 {args}
+
+    # ── changing code ──
+    # No fmt preset: the code is not rustfmt-formatted (long lines by choice); match the surrounding style by hand.
+    # replace -- <file> <old> <new>
+    replace: { seq: ["python3 .harno/tools/edit/edit.py replace {args}"] }
+    # lines -- <file> <a>-<b> <text>; several: bottom up
+    lines: { seq: ["python3 .harno/tools/edit/edit.py lines {args}"] }
+    # write -- <file> <text>
+    write: { seq: ["python3 .harno/tools/edit/edit.py write {args}"] }
+    # doc -- <id> <old> <new>: a text in the body of a doc node; its lines are found when it runs
+    doc: { seq: ["python3 .harno/tools/edit/edit.py doc {args}"] }
+    # rewrite -- -p 'foo($A)' -r 'bar($A)' -U crates/
+    rewrite: { seq: ["ast-grep run --lang rust {args}"] }
+    # apply -- <plan>: the edits of a plan, no checks
+    apply: { seq: ["python3 .harno/tools/implement/implement.py {args}"] }
+    # implement -- <plan>: edits, docs, checks and the commit in one call.
+    # test comes before install, so a change that panics never becomes the harno of the
+    # next call; every other check is ci alone, which runs them all anyway.
+    implement:
+      seq:
+        - python3 .harno/tools/implement/implement.py {args}
+        - test
+        - install
+        - refresh
+        - checks
+        - python3 .harno/tools/implement/implement.py --commit
+
+    # ── checking ──
+    build: { seq: [cargo build --workspace] }
+    test: { seq: ["cargo nextest run --workspace --status-level fail --final-status-level fail --hide-progress-bar --no-fail-fast {args}"] }
+    clippy: { seq: [cargo clippy --workspace --all-targets] }
+    # checks: everything ci runs after the tests. A chain that has run test already, such
+    # as implement, calls this instead of ci, so nothing runs twice.
+    checks:
+      seq:
+        - cargo test --workspace --doc
+        - clippy
+        - targets
+        - mdmap -- check
+        - harno tool test
+        - mdmap -- lint
+        - areas
+        - typos
+        - mdmap -- verify
+        - python3 tools/claude-code/tests/test_only_harno.py
+        - python3 tools/claude-code/tests/test_hook.py
+        - python3 tools/claude-code/tests/test_session.py
+        - python3 tools/claude-code/tests/test_install.py
+        - python3 tools/claude-code/tests/test_sandbox.py
+        - python3 tools/implement/tests/test_implement.py
+        - python3 tools/edit/tests/test_edit.py
+        - python3 tools/sym/tests/test_sym.py
+        - python3 tools/text/tests/test_text.py
+        - python3 tools/commit-only/tests/test_commit_only.py
+        - node tools/analytics/tests/test_rows.mjs
+        - node tools/analytics/tests/test_kept.mjs
+        - node tools/analytics/tests/test_page.mjs
+    machete: { seq: [cargo machete] }
+    # spell: _typos.toml says what is not a typo
+    spell: { seq: [typos] }
+    # cover: lines no test runs; its own build, about 15 s
+    cover: { seq: [cargo llvm-cov nextest --workspace --show-missing-lines --status-level fail --final-status-level fail --hide-progress-bar] }
+    # accept: an inline snapshot takes the output of the last failing test run
+    accept: { seq: [cargo insta accept] }
+    # areas: every Rust source file is in an area of Code map, and every file an area lists exists.
+    # The two lists go through files under target/: the sandbox of the harness reads no /dev/fd,
+    # and a process substitution that cannot be read fails the check without saying so.
+    areas:
+      seq:
+        - >-
+          bash -c 'mkdir -p target &&
+          find crates tools -name "*.rs" \( -path "crates/*/src/*" -o -path "crates/*/tests/*" ! -path "crates/*/tests/*/*" -o -path "crates/*/build.rs" -o -path "tools/*/src/*" -o -path "tools/*/tests/*" \) | sort > target/areas-code.txt &&
+          grep -rhoE --include="*.md" "verify: outline [^>]*-->" docs | sed -E "s/.* outline //; s/ *-->//" | tr " " "\n" | grep . | sort -u > target/areas-docs.txt &&
+          diff target/areas-code.txt target/areas-docs.txt
+          | sed -nE "s/^< (.*)/no area lists \1/p; s/^> (.*)/an area lists \1, which does not exist/p" | grep . && exit 1 || echo every source file is in an area'
+    # ci: the whole gate, standalone
+    ci: { seq: [test, checks] }
+    # targets: the release builds Linux and Windows, which a mac never compiles; needs
+    # rustup target add x86_64-unknown-linux-gnu x86_64-pc-windows-gnu
+    targets:
+      par:
+        - cargo clippy -p harno --target x86_64-unknown-linux-gnu --locked --all-targets
+        - cargo clippy -p harno --target x86_64-pc-windows-gnu --locked --all-targets
+    # refresh: the verify blocks of the docs follow the code; before every commit.
+    # areas is a check, not a fix: checks runs it right after.
+    refresh: { seq: [mdmap -- verify --fix] }
+    # doctor: every outside program the presets use is there
+    doctor:
+      par:
+        - cargo modules --version
+        - cargo public-api --version
+        - cargo nextest --version
+        - cargo machete --version
+        - cargo llvm-cov --version
+        - cargo insta --version
+        - ast-grep --version
+        - rg --version
+        - bat --version
+        - tokei --version
+        - difft --version
+        - shfmt --version
+        - mcptools version
+        - jq --version
+        - curl --version
+        - typos --version
+        - graphify --help
+        - python3 --version
+
+    # ── installing ──
+    # The harno this session works through is an installed copy, not target/: a broken build cannot lock the agent out.
+    # analytics is built into its tool folder, since a preset names the path of its program;
+    # mdmap is installed from its own repository, harno run install there.
+    # The tool copies under .harno/ are not touched here: after a change to a tool the human runs
+    # harno tool update. A tool writes nothing by itself either; what the Claude Code one puts
+    # in .claude/settings.json goes through the claude-code preset.
+    install:
+      seq:
+        - cargo install --path crates/harno --locked --force
+        - cargo install --path tools/analytics --root .harno/tools/analytics --locked --force
+
+    # ── git ──
+    status: { seq: [git status --short] }
+    # diff [-- <path>]
+    diff: { seq: ["git -c diff.external='difft --color=never --display=inline' diff {args}"] }
+    # diffstat [-- <path>]
+    diffstat: { seq: ["git diff --stat {args}"] }
+    # log [-- <path>] [-- -n 100]: 20 commits unless the caller writes -n
+    log: { seq: ["git log --oneline {args}"], defaults: { "-n": "20" } }
+    # commit -- 'message': the last item of a --seq, after the checks
+    commit: { seq: [git add -A, "git commit -m {args}"] }
+    # text -- <word or phrase…> [<path>…]: the text as it reads; no quotes, no regex
+    text: { seq: ["python3 .harno/tools/text/text.py {args}"] }
+    # commit-only -- <message> <path>…: those paths, new, changed or deleted; every other change stays
+    commit-only: { seq: ["bash .harno/tools/commit-only/commit-only.sh {args}"] }
+
+  # What an output looks like before the agent reads it: Guide, Filtering command output.
+  filters:
+    "*": { dedupe: true, head: 100, tail: 100 }
+    # tool folders, copied with harno tool add
+    cargo test: .harno/tools/cargo-test-filter
+    cargo build: .harno/tools/cargo-build-filter
+    cargo check: .harno/tools/cargo-build-filter
+    cargo clippy: .harno/tools/cargo-clippy-filter
+    # noise
+    # cargo install: which package went where is in the log; a call says that it ran
+    cargo install:
+      drop:
+        - "^\\s*(Installing|Updating|Compiling|Downloading|Downloaded|Finished|Replacing|Replaced|Ignored|Fresh|Blocking|Locking|Adding)\\b"
+        - "^warning: be sure to add"
+        - "while finding MacOSX\\.sdk"
+        - "DVTFilePathFSEvents"
+        - "xcrun: error: .*cache file"
+        - "generated \\d+ warnings?$"
+        - "^\\s+\\|$"
+      on_empty: installed
+      tests:
+        - input: "  Installing harno v0.1.0 (/p/crates/harno)\n    Updating crates.io index\n   Compiling harno v0.1.0 (/p/crates/harno)\n    Finished `release` profile [optimized] target(s) in 3.4s\n   Replacing /home/u/.cargo/bin/harno\n    Replaced package `harno v0.1.0 (/p)` with `harno v0.1.0 (/p)` (executable `harno`)\nwarning: be sure to add /p/bin to your PATH to be able to run the installed binaries\n"
+          expected: "installed\n"
+        - input: "warning: output of `xcrun` while finding MacOSX.sdk\n  |\n  = note: 2026-09-21 11:05:39.551 xcodebuild[6830:36989]  DVTFilePathFSEvents: Failed to start fs event stream.\n          xcrun: error: couldn't create cache file /var/folders/7f/xcrun_db (errno=Operation not permitted)\n\nwarning: `harno` (lib test) generated 1 warning\n   Replacing /home/u/.cargo/bin/harno\n"
+          expected: "installed\n"
+        - exit: 101
+          input: "  Installing harno v0.1.0 (/p/crates/harno)\nerror: could not compile `harno` (lib) due to 1 previous error\n"
+          expected: "error: could not compile `harno` (lib) due to 1 previous error\n"
+    cargo llvm-cov: { drop: ['^\s*Compiling ', '^info: cargo-llvm-cov', '^\s*Starting \d+ tests', '^─+$', '^ Nextest run ID'] }
+    # cargo machete: the dependencies it found, not the advice around them
+    cargo machete:
+      keep: ['found the following', 'Cargo\.toml:', '^\s+\w']
+      on_empty: every dependency is used
+      tests:
+        - input: "cargo-machete found the following unused dependencies in this directory:\nharno-log -- ./crates/harno-log/Cargo.toml:\n\tfastrand\n\nIf you believe cargo-machete has detected an unused dependency incorrectly,\nyou can add the dependency to the list of dependencies to ignore in the\nsection of the appropriate Cargo.toml.\nFor example:\n\nignored = [prost]\n\nDone!\n"
+          expected: "cargo-machete found the following unused dependencies in this directory:\nharno-log -- ./crates/harno-log/Cargo.toml:\n\tfastrand\n"
+          exit: 1
+        - input: "Analyzing dependencies of crates in this directory...\nDone!\n"
+          expected: "every dependency is used\n"
+    # tokei: the numbers, not the rules between them
+    tokei:
+      drop: ['^[━─]+$']
+      tests:
+        - input: "━━━━\n Rust 8 2371\n────\n"
+          expected: " Rust 8 2371\n"
+    git status:
+      on_empty: clean
+      tests: [{ input: "", expected: "clean\n" }]
+    git show: { width: 400 }
+    git diff:
+      width: 400
+      on_empty: no change
+      tests: [{ input: "", expected: "no change\n" }]
+    typos:
+      on_empty: no typos
+      tests: [{ input: "", expected: "no typos\n" }]
+    graphify extract: { drop: ['.*'], on_empty: 'graph updated' }
+    # mdmap verify: a failure keeps its diff
+    mdmap verify: { drop: ['^  [+-] ', '^[0-9a-f]{6}  .* (ok|fixed)$'], on_fail: { drop: ['^[0-9a-f]{6}  .* (ok|fixed)$'] } }
+    # a read the agent asked for is never cut; a name it cannot find is an answer, exit 1
+    python3 .harno/tools/sym/sym.py: { head: 0, tail: 0, ok: [1], on_fail: { tail: 2 } }
+    mdmap: { head: 0, tail: 0 }
+    # stats: the corpus in numbers and what the log opened; the tail of never opened
+    # headings is a list of its own, mdmap stats --unread
+    mdmap stats: { head: 30, tail: 0 }
+    mdmap stats --unread: { head: 0, tail: 0 }
+    # doctor: the version line only
+    graphify --help: { head: 1, tail: 0 }
+    curl --version: { head: 1, tail: 0 }
+    rg --version: { head: 1, tail: 0 }
+    difft --version: { head: 1, tail: 0 }
+    cargo nextest --version: { head: 1, tail: 0 }
+    rg: .harno/tools/rg-filter
+    bat: .harno/tools/bat-filter
+    cargo nextest: .harno/tools/cargo-nextest-filter
+    python3 .harno/tools/text/text.py: .harno/tools/text
+
+deny:
+  # The corpus whole is for a program, not for a call: ls, show and search read the tree,
+  # and export would put every character of it into one answer.
+  calls: [harno run mdmap ls --body, harno run mdmap export]
+
+warn:
+  output: 20000  # characters; a longer output starts with advice to narrow the call

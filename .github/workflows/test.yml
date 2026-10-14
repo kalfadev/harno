@@ -1,0 +1,35 @@
+# The tests on Linux, and on Windows a harno that starts a command: the mac
+# that builds harno runs the tests on macOS at every commit, never these two.
+name: Test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --workspace --locked
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build -p harno --locked
+      - name: harno runs a command
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $harno = "$env:GITHUB_WORKSPACE\target\debug\harno.exe"
+          $project = New-Item -ItemType Directory "$env:RUNNER_TEMP\project"
+          Set-Location $project
+          & $harno init
+          (Get-Content .harno\config.yml) -replace "^  allow: \[\]$", "  allow:`n    - cargo --version" | Set-Content .harno\config.yml
+          & $harno run "cargo --version"
+          & $harno log ls

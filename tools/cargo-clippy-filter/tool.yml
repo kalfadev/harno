@@ -1,0 +1,17 @@
+# harno filter for `cargo clippy` (harno tool add cargo-clippy-filter)
+filter:
+  command: cargo clippy
+  # Finished says only that it ran: a clean run is the on_empty line.
+  drop:
+    - '^\s+(Compiling|Checking|Downloaded|Downloading|Blocking|Locking|Updating|Finished)\b'
+  dedupe: true
+  # A lint line carries a type or a suggestion whole; the rest is in the log.
+  width: 200
+  on_empty: 'cargo clippy: ok'
+  tests:
+    - input: |2
+            Checking foo v0.1.0
+            Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.3s
+      expected: "cargo clippy: ok\n"
+    - input: "    Checking foo v0.1.0\nwarning: unused variable: `x`\n --> src/lib.rs:1:5\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.3s\n"
+      expected: "warning: unused variable: `x`\n --> src/lib.rs:1:5\n"

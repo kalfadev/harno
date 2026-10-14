@@ -1,0 +1,5 @@
+# docs {be9b47}
+
+harno is the harness an agent works through: every command through one allow list, output filtered before the agent reads it, a verbatim log of the session, and tools a project adds: a program a preset runs, an output filter, the hook scripts of a harness. Its docs command, mdmap, a program of its own repository that `harno run mdmap` calls, reads markdown as one tree an agent walks by id and path instead of opening files, and shows the size of every neighbour before it is opened. These docs are the corpus of harno itself, read and written only with `harno run mdmap`.
+
+New here: start with **Overview**, what harno is, how a call flows and where each part lives. Then **Guide**: install harno, start a project, every verb, filters, the log, the docs tool, and the manual of `harno help --verbose`. **Claude Code setup**: how an agent is wired to harno, ending with the steps for your own project. **Code map**: the code by area, with every item. **Roadmap**: what comes next. **Working here**: how to work on this repository.

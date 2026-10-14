@@ -1,0 +1,23 @@
+# sym: the items of source files, with their line spans (outline), where a
+# name is defined (def), an item with its doc comments (body); Rust, TypeScript,
+# TSX, JavaScript and Python, through ast-grep.
+# harno tool add writes the presets below into run.presets of .harno/config.yml.
+presets:
+  # outline -- <file>: the items of a file, with their spans
+  outline: { seq: ["python3 .harno/tools/sym/sym.py outline {args}"] }
+  # def -- <name> [Type::method]…: where a name is defined
+  def: { seq: ["python3 .harno/tools/sym/sym.py def {args}"] }
+  # body -- <name>… [--in <file>]: an item with its doc comments, numbered
+  body: { seq: ["python3 .harno/tools/sym/sym.py body {args}"] }
+# a read the agent asked for is never cut; a name it cannot find is an answer, exit 1
+filter:
+  command: python3 .harno/tools/sym/sym.py
+  head: 0
+  tail: 0
+  ok: [1]
+  on_fail: { tail: 2 }
+  tests: [{ input: "not found: x\n", expected: "not found: x\n", exit: 1 }]
+config:
+  # Where def and body look without --in, comma separated: the folders of the code,
+  # since a scan of the whole project reads every file of every language.
+  roots: "."

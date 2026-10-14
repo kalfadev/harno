@@ -1,0 +1,10 @@
+# harno filter for `rg` (harno tool add rg-filter)
+# a read that comes back empty says so instead of nothing
+# width: one line can be a whole minified file, and head/tail cannot reach inside it
+# ok: no match is an answer, not a failure; a path that is not there still exits 2
+filter:
+  command: rg
+  width: 400
+  on_empty: no match
+  ok: [1]
+  tests: [{ input: "", expected: "no match\n", exit: 1 }]

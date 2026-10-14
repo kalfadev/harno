@@ -1,0 +1,24 @@
+[package]
+name = "analytics"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "The session log of a harno project on one local read-only page: turns, calls and what each returned"
+
+# Not a release of its own: the preset runs it from .harno/tools/analytics/bin,
+# where a checkout builds it.
+[package.metadata.dist]
+dist = false
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "analytics"
+path = "src/main.rs"
+
+[dependencies]
+serde_json = { version = "1", features = ["preserve_order"] }
+
+[dev-dependencies]
+tempfile = "3"

@@ -1,0 +1,30 @@
+# harno filter for `cargo nextest` (harno tool add cargo-nextest-filter)
+# The summary and the failures. The SDK warning xcrun writes on macOS when a sandbox
+# keeps it from its cache repeats for every crate of the workspace and says nothing
+# about the code.
+filter:
+  command: cargo nextest
+  drop:
+    - "^\\s*Starting \\d+ tests"
+    - "^\\s*(Compiling|Finished) "
+    - "^─+$"
+    - "^ Nextest run ID"
+    - "while finding MacOSX\\.sdk"
+    - "DVTFilePathFSEvents"
+    - "xcrun: error: .*cache file"
+    - "generated \\d+ warnings?$"
+    # the gutter and the blank lines of a warning block, as the cargo test filter drops them
+    - "^\\s+\\|$"
+    - "^\\s*$"
+    # what libtest says around a failure that its FAIL line and the summary say already
+    - "^    running \\d+ tests?$"
+    - "^    test \\S+ \\.\\.\\. FAILED$"
+    - "^    test result: FAILED\\. "
+    - "^    note: run with `RUST_BACKTRACE=1`"
+  tests:
+    - input: "warning: output of `xcrun` while finding MacOSX.sdk\n  |\n  = note: 2026-09-21 11:05:39.551 xcodebuild[6830:36989]  DVTFilePathFSEvents: Failed to start fs event stream.\n          xcrun: error: couldn't create cache file /var/folders/7f/xcrun_db (errno=Operation not permitted)\n\nwarning: `mdmap` (lib test) generated 1 warning\n    Summary [   2.4s] 240 tests run: 240 passed, 0 skipped\n"
+      expected: "    Summary [   2.4s] 240 tests run: 240 passed, 0 skipped\n"
+    # a failure keeps its report: the names, the panic and the summary
+    - exit: 100
+      input: "warning: output of `xcrun` while finding MacOSX.sdk\n  |\n  = note: DVTFilePathFSEvents: Failed to start fs event stream.\n\nwarning: `mdmap` (test show) generated 1 warning\n  TRY 2 FAIL [   0.009s] mdmap::show a_test_name\n  stdout ───\n\n    running 1 test\n    test a_test_name ... FAILED\n\n    failures:\n        a_test_name\n\n    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s\n\n  stderr ───\n\n    thread 'a_test_name' panicked at tools/mdmap/tests/show.rs:38:5:\n    the assertion message\n\n    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n     Summary [   2.3s] 239 tests run: 238 passed, 1 failed, 0 skipped\nerror: test run failed\n"
+      expected: "  TRY 2 FAIL [   0.009s] mdmap::show a_test_name\n  stdout ───\n    failures:\n        a_test_name\n  stderr ───\n    thread 'a_test_name' panicked at tools/mdmap/tests/show.rs:38:5:\n    the assertion message\n     Summary [   2.3s] 239 tests run: 238 passed, 1 failed, 0 skipped\nerror: test run failed\n"

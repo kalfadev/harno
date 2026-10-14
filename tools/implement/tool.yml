@@ -1,0 +1,7 @@
+# implement: apply a plan of edits in one call; see the docstring of implement.py.
+# harno tool add writes the preset below into run.presets of .harno/config.yml. The
+# checks and the commit of a whole change are a preset of the project, which runs
+# this one first and then what that project runs on a change.
+presets:
+  # apply -- <plan>: the edits of a plan, no checks
+  apply: { seq: ["python3 .harno/tools/implement/implement.py {args}"] }
