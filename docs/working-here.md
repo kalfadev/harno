@@ -4,7 +4,14 @@ Every action goes through harno: Claude Code's own tools are denied, and a hook 
 
 ## Rules {47dc05}
 
-Docs (`docs/`) are read and written only as nodes of mdmap: `ls`, `show <id>|<path>`, `search "<text>"`, `add`, `update`, `move`, `remove`, all through `harno run mdmap`, or `doc` for a text inside a body. Find a text with `search`, never `rg` over `docs/`: it gives the id `show` takes. A long argument is one single-quoted string with real newlines, a quote inside written `'\''`; no heredoc, no `$(…)`. The code is not rustfmt-formatted: match its long-line style by hand. Code, comments and docs in English; talk to the owner in the language of the owner, short and plain, with examples. The owner decides design points: ask with concrete options, and record the answer and why in the doc of that part. Docs say what is, never what was: the commit log keeps the past. Commit when sure the work is done, never push. A feature or field only when a real need shows up. The log is verbatim: never filter or reinterpret what the agent did.
+- Docs only through `harno run mdmap` (`ls`, `show`, `search`, `add`, `update`, `move`, `remove`), or `doc` for a text inside a body. Find a text with `search`: it gives the id `show` takes.
+- Code, comments and docs in English. Answer the owner in their language, short and plain, with examples.
+- The owner decides design points: ask with concrete options, and write the answer and its reason into the doc of that part.
+- Docs say what is, never what was: the commit log keeps the past.
+- Work on a branch: `master` takes pull requests only. Commit when the work is done, never push. A commit subject stays under 72 characters, since GitHub cuts a longer one.
+- The code is not rustfmt-formatted: match its long-line style by hand.
+- A feature or a field only when a real need shows up.
+- The log is verbatim: never filter or reinterpret what the agent did.
 
 ## Presets {7cf629}
 

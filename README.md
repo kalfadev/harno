@@ -161,8 +161,8 @@ preset, a filter or a line of docs, so the next task goes faster.
 ## Status
 
 Early, version 0.1. The config format may still change. Built for macOS, Linux
-and Windows. It is used daily on macOS, where the tests run at every commit; on
-GitHub they run on Linux at every push, and on Windows the CI builds harno and
+and Windows. It is used daily on macOS. On GitHub the tests run on Linux and
+macOS for every push and pull request, and on Windows the CI builds harno and
 runs a command through it.
 The Claude Code hooks are Python scripts, run as `python3`, or `python` on
 Windows.
